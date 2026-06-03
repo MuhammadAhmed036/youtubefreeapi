@@ -1,0 +1,13 @@
+venv
+env
+__pycache__/
+*.pyc
+.DS_Store
+
+downloads/
+*.mp4
+ffmpeg/
+node_modules/
+frontend/node_modules/
+frontend/.next/
+package-lock.json

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Video Downloader</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Flask · Pytubefix · FFmpeg</p>
+        <h1>YouTube Video Downloader</h1>
+        <p class="lead">Paste a YouTube link, pick a resolution, and download a merged MP4 with audio to your machine.</p>
+      </div>
+      <div class="hero-card">
+        <div class="metric">
+          <span>Video</span>
+          <strong>720p / 1080p / Auto</strong>
+        </div>
+        <div class="metric">
+          <span>Output</span>
+          <strong>Single MP4 file</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="field-group">
+        <label for="videoUrl">YouTube URL</label>
+        <input id="videoUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
+      </div>
+
+      <div class="actions-row">
+        <button id="loadBtn" class="btn secondary" type="button">Load resolutions</button>
+        <button id="downloadBtn" class="btn primary" type="button">Download video</button>
+      </div>
+
+      <div class="grid">
+        <div class="field-group">
+          <label for="resolution">Resolution</label>
+          <select id="resolution">
+            <option value="360p">360p</option>
+            <option value="480p">480p</option>
+            <option value="720p" selected>720p</option>
+            <option value="1080p">1080p</option>
+            <option value="1440p">1440p</option>
+            <option value="2160p">2160p</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="info-grid">
+        <article class="info-card">
+          <span>Title</span>
+          <strong id="title">Waiting for input</strong>
+        </article>
+        <article class="info-card">
+          <span>Author</span>
+          <strong id="author">-</strong>
+        </article>
+        <article class="info-card">
+          <span>Length</span>
+          <strong id="length">-</strong>
+        </article>
+        <article class="info-card">
+          <span>Available</span>
+          <strong id="available">-</strong>
+        </article>
+      </div>
+
+      <div id="status" class="status">Ready.</div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
