@@ -10,6 +10,10 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+def create_youtube(url):
+    return YouTube(url, 'WEB')
+
+
 def get_video_id(url):
     parsed = urlparse(url)
     hostname = (parsed.hostname or '').lower()
@@ -27,7 +31,7 @@ def get_video_id(url):
 
 def download_video(url, resolution):
     try:
-        yt = YouTube(url)
+        yt = create_youtube(url)
         video_id = get_video_id(url) or 'video'
         out_dir = os.path.join(BASE_DIR, 'downloads', video_id)
         
@@ -108,7 +112,7 @@ def merge_video_audio(video_path, audio_path, out_path):
 
 def get_video_info(url):
     try:
-        yt = YouTube(url)
+        yt = create_youtube(url)
         stream = yt.streams.first()
         video_info = {
             "title": yt.title,
@@ -220,7 +224,7 @@ def available_resolutions():
         return jsonify({"error": "Invalid YouTube URL."}), 400
 
     try:
-        yt = YouTube(url)
+        yt = create_youtube(url)
         progressive_resolutions = list(set([
             stream.resolution 
             for stream in yt.streams.filter(progressive=True, file_extension='mp4')
