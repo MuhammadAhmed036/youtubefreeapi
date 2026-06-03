@@ -39,26 +39,22 @@ def retry_on_429(max_retries=3, backoff_factor=2):
 
 @retry_on_429(max_retries=3, backoff_factor=2)
 def create_youtube(url):
-    """Create YouTube object with fallback strategies for bot detection."""
-    # Strategy 1: Try WEB client (most reliable)
+    """Create YouTube object with automatic PoToken generation."""
     try:
-        return YouTube(url, 'WEB')
+        # Use WEB client with automatic PoToken generation
+        # Pytubefix 8.12+ automatically generates PoToken via Node.js
+        return YouTube(url, 'WEB', use_po_token=True)
     except Exception as e:
         error_str = str(e)
-        if 'bot' in error_str.lower() or 'po_token' in error_str.lower():
-            print(f"WEB client blocked. Trying ANDROID client... Error: {error_str}")
-            try:
-                # Strategy 2: Try ANDROID client (often bypasses bot detection)
-                return YouTube(url, 'ANDROID')
-            except Exception as e2:
-                print(f"ANDROID client failed. Trying ANDROID_MUSIC client... Error: {e2}")
-                try:
-                    # Strategy 3: Try ANDROID_MUSIC client
-                    return YouTube(url, 'ANDROID_MUSIC')
-                except Exception as e3:
-                    print(f"All clients failed. Last error: {e3}")
-                    raise Exception(f"Unable to fetch video. YouTube may be blocking requests. Error: {error_str}")
-        raise
+        print(f"WEB client with PoToken failed: {error_str}")
+
+        # Fallback: Try ANDROID client with PoToken
+        try:
+            return YouTube(url, 'ANDROID', use_po_token=True)
+        except Exception as e2:
+            print(f"ANDROID client with PoToken failed: {e2}")
+            # If both fail, raise the original error
+            raise Exception(f"Unable to fetch video. YouTube is blocking requests. Error: {error_str}")
 
 
 def get_video_id(url):
