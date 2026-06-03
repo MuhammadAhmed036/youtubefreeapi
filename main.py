@@ -39,7 +39,26 @@ def retry_on_429(max_retries=3, backoff_factor=2):
 
 @retry_on_429(max_retries=3, backoff_factor=2)
 def create_youtube(url):
-    return YouTube(url, 'WEB')
+    """Create YouTube object with fallback strategies for bot detection."""
+    # Strategy 1: Try WEB client (most reliable)
+    try:
+        return YouTube(url, 'WEB')
+    except Exception as e:
+        error_str = str(e)
+        if 'bot' in error_str.lower() or 'po_token' in error_str.lower():
+            print(f"WEB client blocked. Trying ANDROID client... Error: {error_str}")
+            try:
+                # Strategy 2: Try ANDROID client (often bypasses bot detection)
+                return YouTube(url, 'ANDROID')
+            except Exception as e2:
+                print(f"ANDROID client failed. Trying ANDROID_MUSIC client... Error: {e2}")
+                try:
+                    # Strategy 3: Try ANDROID_MUSIC client
+                    return YouTube(url, 'ANDROID_MUSIC')
+                except Exception as e3:
+                    print(f"All clients failed. Last error: {e3}")
+                    raise Exception(f"Unable to fetch video. YouTube may be blocking requests. Error: {error_str}")
+        raise
 
 
 def get_video_id(url):
