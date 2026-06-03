@@ -1,15 +1,43 @@
 from flask import Flask, request, jsonify, render_template, send_file
+from flask_caching import Cache
 from pytubefix import YouTube
+from functools import wraps
 import re
 import os
 import shutil
 import subprocess
+import time
 from urllib.parse import urlparse, parse_qs
 
 app = Flask(__name__)
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+def retry_on_429(max_retries=3, backoff_factor=2):
+    """Decorator to retry YouTube requests with exponential backoff on 429 errors."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    error_str = str(e)
+                    # Check if it's a 429 or rate-limit related error
+                    if '429' in error_str or 'rate' in error_str.lower():
+                        if attempt < max_retries - 1:
+                            wait_time = backoff_factor ** attempt
+                            print(f"Rate limited. Retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                            time.sleep(wait_time)
+                            continue
+                    raise
+            return None
+        return wrapper
+    return decorator
+
+
+@retry_on_429(max_retries=3, backoff_factor=2)
 def create_youtube(url):
     return YouTube(url, 'WEB')
 
@@ -188,6 +216,7 @@ def download_file(resolution):
     )
 
 @app.route('/video_info', methods=['POST', 'GET'])
+@cache.cached(timeout=3600, query_string=True)
 def video_info():
     if request.method == 'GET':
         url = request.args.get('url')
@@ -201,15 +230,26 @@ def video_info():
     if not is_valid_youtube_url(url):
         return jsonify({"error": "Invalid YouTube URL."}), 400
 
-    video_info, error_message = get_video_info(url)
+    try:
+        video_info, error_message = get_video_info(url)
+        if video_info:
+            return jsonify(video_info), 200
+        else:
+            error_msg = error_message or "Unknown error"
+            if '429' in error_msg or 'rate' in error_msg.lower():
+                return jsonify({"error": "YouTube is rate-limiting requests. Please try again in a few moments."}), 429
+            return jsonify({"error": error_msg}), 500
+    except Exception as e:
+        error_msg = str(e)
+        if '429' in error_msg or 'rate' in error_msg.lower():
+            return jsonify({"error": "YouTube is rate-limiting requests. Please try again in a few moments."}), 429
+        return jsonify({"error": error_msg}), 500
 
-    if video_info:
-        return jsonify(video_info), 200
-    else:
-        return jsonify({"error": error_message}), 500
+
 
 
 @app.route('/available_resolutions', methods=['POST', 'GET'])
+@cache.cached(timeout=3600, query_string=True)
 def available_resolutions():
     if request.method == 'GET':
         url = request.args.get('url')
@@ -240,7 +280,11 @@ def available_resolutions():
             "all": sorted(all_resolutions)
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        error_msg = str(e)
+        if '429' in error_msg or 'rate' in error_msg.lower():
+            return jsonify({"error": "YouTube is rate-limiting requests. Please try again in a few moments."}), 429
+        return jsonify({"error": error_msg}), 500
+
     
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
